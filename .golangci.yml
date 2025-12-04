@@ -1,0 +1,59 @@
+run:
+  timeout: 5m
+  tests: true
+
+output:
+  formats:
+    - format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+
+linters-settings:
+  errcheck:
+    check-type-assertions: false
+    check-blank: false
+
+  gofmt:
+    simplify: true
+
+  goimports:
+    local-prefixes: github.com/andrey-samosuk/answer-questions
+
+  misspell:
+    locale: US
+
+  unused:
+    check-exported: false
+
+  revive:
+    rules:
+      - name: unused-parameter
+        disabled: true
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    - gofmt
+    - goimports
+    - misspell
+    - revive
+
+  disable-all: false
+  fast: false
+
+issues:
+  exclude-dirs:
+    - vendor
+    - .git
+
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gosec
+        - errcheck
