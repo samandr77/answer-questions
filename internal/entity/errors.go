@@ -1,21 +1,56 @@
 package entity
 
-import "errors"
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
+type CustomError struct {
+	Code    int
+	Message string
+}
+
+func (e CustomError) Error() string {
+	return e.Message
+}
 
 var (
-	// Question errors
-	ErrQuestionNotFound    = errors.New("question not found")
-	ErrInvalidQuestionText = errors.New("invalid question text")
+	ErrQuestionNotFound = CustomError{
+		Code:    404,
+		Message: "Вопрос не найден",
+	}
+	ErrInvalidQuestionText = CustomError{
+		Code:    400,
+		Message: "Текст вопроса не может быть пустым",
+	}
+	ErrQuestionAlreadyExists = CustomError{
+		Code:    409,
+		Message: "Вопрос с таким текстом уже существует",
+	}
 
-	// Answer errors
-	ErrAnswerNotFound    = errors.New("answer not found")
-	ErrInvalidAnswerText = errors.New("invalid answer text")
-	ErrInvalidUserID     = errors.New("invalid user id")
+	ErrAnswerNotFound = CustomError{
+		Code:    404,
+		Message: "Ответ не найден",
+	}
+	ErrInvalidAnswerText = CustomError{
+		Code:    400,
+		Message: "Текст ответа не может быть пустым",
+	}
+	ErrInvalidUserID = CustomError{
+		Code:    400,
+		Message: "ID пользователя не может быть пустым",
+	}
 
-	// Database errors
-	ErrDatabaseConnection = errors.New("database connection error")
-	ErrDatabaseQuery      = errors.New("database query error")
+	ErrDatabaseConnection = CustomError{
+		Code:    500,
+		Message: "Ошибка подключения к базе данных",
+	}
+	ErrDatabaseQuery = CustomError{
+		Code:    500,
+		Message: "Ошибка при выполнении запроса к базе данных",
+	}
 
-	// Validation errors
-	ErrValidationFailed = errors.New("validation failed")
+	ErrValidationFailed = CustomError{
+		Code:    400,
+		Message: "Ошибка валидации данных",
+	}
 )

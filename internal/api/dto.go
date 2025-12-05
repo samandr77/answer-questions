@@ -41,6 +41,5 @@ type AnswerResponse struct {
 }
 
 type ErrorResponse struct {
-	Error   string `json:"error"`
-	Message string `json:"message,omitempty"`
+	Error string `json:"error"`
 }

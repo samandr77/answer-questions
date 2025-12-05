@@ -17,6 +17,8 @@ func NewRouter(handler *Handler) *Router {
 }
 
 func (router *Router) Setup() *http.ServeMux {
+	router.mux.HandleFunc("GET /", router.handler.HealthCheck)
+
 	router.mux.HandleFunc("GET /questions/", router.handler.GetQuestions)
 	router.mux.HandleFunc("POST /questions/", router.handler.CreateQuestion)
 	router.mux.HandleFunc("GET /questions/{id}", router.handler.GetQuestion)

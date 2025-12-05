@@ -26,13 +26,30 @@ func NewQuestionService(repo repository.QuestionRepository) QuestionService {
 }
 
 func (s *questionService) CreateQuestion(ctx context.Context, text string) (*entity.Question, error) {
-	// TODO: реализовать валидацию и создание
-	return nil, nil
+	if err := ValidateQuestion(text); err != nil {
+		return nil, err
+	}
+
+	_, err := s.repo.GetByText(ctx, text)
+	if err == nil {
+		return nil, entity.ErrQuestionAlreadyExists
+	}
+
+	question := &entity.Question{Text: text}
+	if err := s.repo.Create(ctx, question); err != nil {
+		return nil, entity.ErrDatabaseQuery
+	}
+
+	return question, nil
 }
 
 func (s *questionService) GetQuestion(ctx context.Context, id int) (*entity.Question, error) {
-	// TODO: реализовать
-	return nil, nil
+	question, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, entity.ErrQuestionNotFound
+	}
+
+	return question, nil
 }
 
 func (s *questionService) GetAllQuestions(ctx context.Context) ([]entity.Question, error) {
@@ -47,6 +64,11 @@ func (s *questionService) GetAllQuestions(ctx context.Context) ([]entity.Questio
 }
 
 func (s *questionService) DeleteQuestion(ctx context.Context, id int) error {
-	// TODO: реализовать
+	if err := s.repo.Delete(ctx, id); err != nil {
+		if err == entity.ErrQuestionNotFound {
+			return entity.ErrQuestionNotFound
+		}
+		return entity.ErrDatabaseQuery
+	}
 	return nil
 }
