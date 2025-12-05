@@ -1,4 +1,4 @@
-package api // nolint: unused
+package api
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/andrey-samosuk/answer-questions/internal/entity"
 	"github.com/andrey-samosuk/answer-questions/internal/service"
 )
 
@@ -32,16 +31,7 @@ func (h *Handler) GetQuestions(w http.ResponseWriter, r *http.Request) {
 
 	questions, err := h.questionService.GetAllQuestions(ctx)
 	if err != nil {
-		log.Printf("Ошибка при получении вопросов: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		if customErr, ok := err.(entity.CustomError); ok {
-			if err := json.NewEncoder(w).Encode(entity.ErrorResponse{
-				Error: customErr.Message,
-			}); err != nil {
-				log.Printf("Ошибка при отправке ответа: %v", err)
-			}
-		}
+		sendCustomError(w, err, "Ошибка при получении вопросов")
 		return
 	}
 
@@ -53,13 +43,9 @@ func (h *Handler) GetQuestions(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(QuestionsMinimalListResponse{
+	sendJSON(w, http.StatusOK, QuestionsMinimalListResponse{
 		Questions: minimalQuestions,
-	}); err != nil {
-		log.Printf("Ошибка при отправке ответа: %v", err)
-	}
+	})
 }
 
 func (h *Handler) CreateQuestion(w http.ResponseWriter, r *http.Request) {
@@ -69,50 +55,21 @@ func (h *Handler) CreateQuestion(w http.ResponseWriter, r *http.Request) {
 	var req CreateQuestionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("Ошибка парсинга JSON: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		if err := json.NewEncoder(w).Encode(entity.ErrorResponse{
-			Error: "Некорректный формат JSON",
-		}); err != nil {
-			log.Printf("Ошибка при отправке ответа: %v", err)
-		}
+		sendError(w, http.StatusBadRequest, "Некорректный формат JSON")
 		return
 	}
 
 	question, err := h.questionService.CreateQuestion(ctx, req.Text)
 	if err != nil {
-		if customErr, ok := err.(entity.CustomError); ok {
-			log.Printf("Ошибка при создании вопроса: %v", err)
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(customErr.Code)
-			if err := json.NewEncoder(w).Encode(entity.ErrorResponse{
-				Error: customErr.Message,
-			}); err != nil {
-				log.Printf("Ошибка при отправке ответа: %v", err)
-			}
-			return
-		}
-
-		log.Printf("Ошибка при создании вопроса: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		if err := json.NewEncoder(w).Encode(entity.ErrorResponse{
-			Error: entity.ErrDatabaseQuery.Message,
-		}); err != nil {
-			log.Printf("Ошибка при отправке ответа: %v", err)
-		}
+		sendCustomError(w, err, "Ошибка при создании вопроса")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(map[string]interface{}{
+	sendJSON(w, http.StatusCreated, map[string]interface{}{
 		"id":         question.ID,
 		"text":       question.Text,
 		"created_at": question.CreatedAt,
-	}); err != nil {
-		log.Printf("Ошибка при отправке ответа: %v", err)
-	}
+	})
 }
 
 func (h *Handler) GetQuestion(w http.ResponseWriter, r *http.Request) {
@@ -123,53 +80,19 @@ func (h *Handler) GetQuestion(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		log.Printf("Ошибка парсинга ID: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		if err := json.NewEncoder(w).Encode(entity.ErrorResponse{
-			Error: "Некорректный формат ID",
-		}); err != nil {
-			log.Printf("Ошибка при отправке ответа: %v", err)
-		}
+		sendError(w, http.StatusBadRequest, "Некорректный формат ID")
 		return
 	}
 
 	question, err := h.questionService.GetQuestion(ctx, id)
 	if err != nil {
-		if customErr, ok := err.(entity.CustomError); ok {
-			log.Printf("Ошибка при получении вопроса: %v", err)
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(customErr.Code)
-			if err := json.NewEncoder(w).Encode(entity.ErrorResponse{
-				Error: customErr.Message,
-			}); err != nil {
-				log.Printf("Ошибка при отправке ответа: %v", err)
-			}
-			return
-		}
-
-		log.Printf("Ошибка при получении вопроса: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		if err := json.NewEncoder(w).Encode(entity.ErrorResponse{
-			Error: entity.ErrDatabaseQuery.Message,
-		}); err != nil {
-			log.Printf("Ошибка при отправке ответа: %v", err)
-		}
+		sendCustomError(w, err, "Ошибка при получении вопроса")
 		return
 	}
 
 	answers, err := h.answerService.GetAnswersByQuestion(ctx, id)
 	if err != nil {
-		log.Printf("Ошибка при получении ответов: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		if customErr, ok := err.(entity.CustomError); ok {
-			if err := json.NewEncoder(w).Encode(entity.ErrorResponse{
-				Error: customErr.Message,
-			}); err != nil {
-				log.Printf("Ошибка при отправке ответа: %v", err)
-			}
-		}
+		sendCustomError(w, err, "Ошибка при получении ответов")
 		return
 	}
 
@@ -183,16 +106,12 @@ func (h *Handler) GetQuestion(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(map[string]interface{}{
+	sendJSON(w, http.StatusOK, map[string]interface{}{
 		"id":         question.ID,
 		"text":       question.Text,
 		"created_at": question.CreatedAt,
 		"answers":    answerResponses,
-	}); err != nil {
-		log.Printf("Ошибка при отправке ответа: %v", err)
-	}
+	})
 }
 
 func (h *Handler) DeleteQuestion(w http.ResponseWriter, r *http.Request) {
@@ -203,38 +122,13 @@ func (h *Handler) DeleteQuestion(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		log.Printf("Ошибка парсинга ID: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		if err := json.NewEncoder(w).Encode(entity.ErrorResponse{
-			Error: "Некорректный формат ID",
-		}); err != nil {
-			log.Printf("Ошибка при отправке ответа: %v", err)
-		}
+		sendError(w, http.StatusBadRequest, "Некорректный формат ID")
 		return
 	}
 
 	err = h.questionService.DeleteQuestion(ctx, id)
 	if err != nil {
-		if customErr, ok := err.(entity.CustomError); ok {
-			log.Printf("Ошибка при удалении вопроса: %v", err)
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(customErr.Code)
-			if err := json.NewEncoder(w).Encode(entity.ErrorResponse{
-				Error: customErr.Message,
-			}); err != nil {
-				log.Printf("Ошибка при отправке ответа: %v", err)
-			}
-			return
-		}
-
-		log.Printf("Ошибка при удалении вопроса: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		if err := json.NewEncoder(w).Encode(entity.ErrorResponse{
-			Error: entity.ErrDatabaseQuery.Message,
-		}); err != nil {
-			log.Printf("Ошибка при отправке ответа: %v", err)
-		}
+		sendCustomError(w, err, "Ошибка при удалении вопроса")
 		return
 	}
 
@@ -249,73 +143,78 @@ func (h *Handler) CreateAnswer(w http.ResponseWriter, r *http.Request) {
 	questionID, err := strconv.Atoi(idStr)
 	if err != nil {
 		log.Printf("Ошибка парсинга ID: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		if err := json.NewEncoder(w).Encode(entity.ErrorResponse{
-			Error: "Некорректный формат ID",
-		}); err != nil {
-			log.Printf("Ошибка при отправке ответа: %v", err)
-		}
+		sendError(w, http.StatusBadRequest, "Некорректный формат ID")
 		return
 	}
 
 	var req CreateAnswerRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("Ошибка парсинга JSON: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		if err := json.NewEncoder(w).Encode(entity.ErrorResponse{
-			Error: "Некорректный формат JSON",
-		}); err != nil {
-			log.Printf("Ошибка при отправке ответа: %v", err)
-		}
+		sendError(w, http.StatusBadRequest, "Некорректный формат JSON")
 		return
 	}
 
 	answer, err := h.answerService.CreateAnswer(ctx, questionID, req.UserID, req.Text)
 	if err != nil {
-		if customErr, ok := err.(entity.CustomError); ok {
-			log.Printf("Ошибка при создании ответа: %v", err)
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(customErr.Code)
-			if err := json.NewEncoder(w).Encode(entity.ErrorResponse{
-				Error: customErr.Message,
-			}); err != nil {
-				log.Printf("Ошибка при отправке ответа: %v", err)
-			}
-			return
-		}
-
-		log.Printf("Ошибка при создании ответа: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		if err := json.NewEncoder(w).Encode(entity.ErrorResponse{
-			Error: entity.ErrDatabaseQuery.Message,
-		}); err != nil {
-			log.Printf("Ошибка при отправке ответа: %v", err)
-		}
+		sendCustomError(w, err, "Ошибка при создании ответа")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(map[string]interface{}{
+	sendJSON(w, http.StatusCreated, map[string]interface{}{
 		"id":          answer.ID,
 		"question_id": answer.QuestionID,
 		"user_id":     answer.UserID,
 		"text":        answer.Text,
 		"created_at":  answer.CreatedAt,
-	}); err != nil {
-		log.Printf("Ошибка при отправке ответа: %v", err)
-	}
+	})
 }
 
 func (h *Handler) GetAnswer(w http.ResponseWriter, r *http.Request) {
-	// TODO: реализовать
+	ctx, cancel := context.WithTimeout(r.Context(), time.Duration(h.requestTimeout)*time.Second)
+	defer cancel()
+
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		log.Printf("Ошибка парсинга ID: %v", err)
+		sendError(w, http.StatusBadRequest, "Некорректный формат ID")
+		return
+	}
+
+	answer, err := h.answerService.GetAnswer(ctx, id)
+	if err != nil {
+		sendCustomError(w, err, "Ошибка при получении ответа")
+		return
+	}
+
+	sendJSON(w, http.StatusOK, map[string]interface{}{
+		"id":          answer.ID,
+		"question_id": answer.QuestionID,
+		"user_id":     answer.UserID,
+		"text":        answer.Text,
+		"created_at":  answer.CreatedAt,
+	})
 }
 
 func (h *Handler) DeleteAnswer(w http.ResponseWriter, r *http.Request) {
-	// TODO: реализовать
+	ctx, cancel := context.WithTimeout(r.Context(), time.Duration(h.requestTimeout)*time.Second)
+	defer cancel()
+
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		log.Printf("Ошибка парсинга ID: %v", err)
+		sendError(w, http.StatusBadRequest, "Некорректный формат ID")
+		return
+	}
+
+	err = h.answerService.DeleteAnswer(ctx, id)
+	if err != nil {
+		sendCustomError(w, err, "Ошибка при удалении ответа")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {

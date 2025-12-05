@@ -48,14 +48,23 @@ func (m *mockQuestionService) DeleteQuestion(ctx context.Context, id int) error 
 }
 
 type mockAnswerService struct {
+	createAnswer         func(ctx context.Context, questionID int, userID, text string) (*entity.Answer, error)
+	getAnswer            func(ctx context.Context, id int) (*entity.Answer, error)
 	getAnswersByQuestion func(ctx context.Context, questionID int) ([]entity.Answer, error)
+	deleteAnswer         func(ctx context.Context, id int) error
 }
 
 func (m *mockAnswerService) CreateAnswer(ctx context.Context, questionID int, userID string, text string) (*entity.Answer, error) {
+	if m.createAnswer != nil {
+		return m.createAnswer(ctx, questionID, userID, text)
+	}
 	return nil, nil
 }
 
 func (m *mockAnswerService) GetAnswer(ctx context.Context, id int) (*entity.Answer, error) {
+	if m.getAnswer != nil {
+		return m.getAnswer(ctx, id)
+	}
 	return nil, nil
 }
 
@@ -67,6 +76,9 @@ func (m *mockAnswerService) GetAnswersByQuestion(ctx context.Context, questionID
 }
 
 func (m *mockAnswerService) DeleteAnswer(ctx context.Context, id int) error {
+	if m.deleteAnswer != nil {
+		return m.deleteAnswer(ctx, id)
+	}
 	return nil
 }
 
@@ -547,6 +559,189 @@ func TestDeleteQuestion_DatabaseError(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	handler.DeleteQuestion(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected status %d, got %d", http.StatusInternalServerError, w.Code)
+	}
+}
+
+func TestGetAnswer_Success(t *testing.T) {
+	createdTime := time.Now()
+	mockAService := &mockAnswerService{
+		getAnswer: func(ctx context.Context, id int) (*entity.Answer, error) {
+			if id == 1 {
+				return &entity.Answer{
+					ID:         1,
+					QuestionID: 1,
+					UserID:     "user1",
+					Text:       "Go is a language",
+					CreatedAt:  createdTime,
+				}, nil
+			}
+			return nil, entity.ErrAnswerNotFound
+		},
+	}
+
+	handler := NewHandler(&mockQuestionService{}, mockAService, 5)
+
+	req := createTestRequest(http.MethodGet, "/answers/1", nil)
+	req.SetPathValue("id", "1")
+	w := httptest.NewRecorder()
+
+	handler.GetAnswer(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	var response map[string]interface{}
+	err := json.NewDecoder(w.Body).Decode(&response)
+	if err != nil {
+		t.Errorf("failed to decode response: %v", err)
+	}
+
+	if response["id"] != float64(1) {
+		t.Errorf("expected id 1, got %v", response["id"])
+	}
+
+	if response["question_id"] != float64(1) {
+		t.Errorf("expected question_id 1, got %v", response["question_id"])
+	}
+
+	if response["user_id"] != "user1" {
+		t.Errorf("expected user_id 'user1', got %v", response["user_id"])
+	}
+
+	if response["text"] != "Go is a language" {
+		t.Errorf("expected text 'Go is a language', got %v", response["text"])
+	}
+}
+
+func TestGetAnswer_NotFound(t *testing.T) {
+	mockAService := &mockAnswerService{
+		getAnswer: func(ctx context.Context, id int) (*entity.Answer, error) {
+			return nil, entity.ErrAnswerNotFound
+		},
+	}
+
+	handler := NewHandler(&mockQuestionService{}, mockAService, 5)
+
+	req := createTestRequest(http.MethodGet, "/answers/999", nil)
+	req.SetPathValue("id", "999")
+	w := httptest.NewRecorder()
+
+	handler.GetAnswer(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected status %d, got %d", http.StatusNotFound, w.Code)
+	}
+
+	var response ErrorResponse
+	err := json.NewDecoder(w.Body).Decode(&response)
+	if err != nil {
+		t.Errorf("failed to decode response: %v", err)
+	}
+
+	if response.Error != "Ответ не найден" {
+		t.Errorf("expected error 'Ответ не найден', got '%s'", response.Error)
+	}
+}
+
+func TestGetAnswer_InvalidID(t *testing.T) {
+	handler := NewHandler(&mockQuestionService{}, &mockAnswerService{}, 5)
+
+	req := createTestRequest(http.MethodGet, "/answers/invalid", nil)
+	req.SetPathValue("id", "invalid")
+	w := httptest.NewRecorder()
+
+	handler.GetAnswer(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+func TestDeleteAnswer_Success(t *testing.T) {
+	mockAService := &mockAnswerService{
+		deleteAnswer: func(ctx context.Context, id int) error {
+			if id == 1 {
+				return nil
+			}
+			return entity.ErrAnswerNotFound
+		},
+	}
+
+	handler := NewHandler(&mockQuestionService{}, mockAService, 5)
+
+	req := createTestRequest(http.MethodDelete, "/answers/1", nil)
+	req.SetPathValue("id", "1")
+	w := httptest.NewRecorder()
+
+	handler.DeleteAnswer(w, req)
+
+	if w.Code != http.StatusNoContent {
+		t.Errorf("expected status %d, got %d", http.StatusNoContent, w.Code)
+	}
+}
+
+func TestDeleteAnswer_NotFound(t *testing.T) {
+	mockAService := &mockAnswerService{
+		deleteAnswer: func(ctx context.Context, id int) error {
+			return entity.ErrAnswerNotFound
+		},
+	}
+
+	handler := NewHandler(&mockQuestionService{}, mockAService, 5)
+
+	req := createTestRequest(http.MethodDelete, "/answers/999", nil)
+	req.SetPathValue("id", "999")
+	w := httptest.NewRecorder()
+
+	handler.DeleteAnswer(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected status %d, got %d", http.StatusNotFound, w.Code)
+	}
+
+	var response ErrorResponse
+	err := json.NewDecoder(w.Body).Decode(&response)
+	if err != nil {
+		t.Errorf("failed to decode response: %v", err)
+	}
+
+	if response.Error != "Ответ не найден" {
+		t.Errorf("expected error 'Ответ не найден', got '%s'", response.Error)
+	}
+}
+
+func TestDeleteAnswer_InvalidID(t *testing.T) {
+	handler := NewHandler(&mockQuestionService{}, &mockAnswerService{}, 5)
+
+	req := createTestRequest(http.MethodDelete, "/answers/invalid", nil)
+	req.SetPathValue("id", "invalid")
+	w := httptest.NewRecorder()
+
+	handler.DeleteAnswer(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+func TestDeleteAnswer_DatabaseError(t *testing.T) {
+	mockAService := &mockAnswerService{
+		deleteAnswer: func(ctx context.Context, id int) error {
+			return entity.ErrDatabaseQuery
+		},
+	}
+
+	handler := NewHandler(&mockQuestionService{}, mockAService, 5)
+
+	req := createTestRequest(http.MethodDelete, "/answers/1", nil)
+	req.SetPathValue("id", "1")
+	w := httptest.NewRecorder()
+
+	handler.DeleteAnswer(w, req)
 
 	if w.Code != http.StatusInternalServerError {
 		t.Errorf("expected status %d, got %d", http.StatusInternalServerError, w.Code)

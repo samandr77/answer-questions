@@ -24,8 +24,11 @@ func (r *answerRepository) Create(ctx context.Context, answer *entity.Answer) (*
 }
 
 func (r *answerRepository) GetByID(ctx context.Context, id int) (*entity.Answer, error) {
-	// TODO: реализовать
-	return nil, nil
+	var answer entity.Answer
+	if err := r.db.WithContext(ctx).First(&answer, id).Error; err != nil {
+		return nil, err
+	}
+	return &answer, nil
 }
 
 func (r *answerRepository) GetByQuestionID(ctx context.Context, questionID int) ([]entity.Answer, error) {
@@ -40,6 +43,12 @@ func (r *answerRepository) GetByQuestionID(ctx context.Context, questionID int) 
 }
 
 func (r *answerRepository) Delete(ctx context.Context, id int) error {
-	// TODO: реализовать
+	result := r.db.WithContext(ctx).Delete(&entity.Answer{}, id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return entity.ErrAnswerNotFound
+	}
 	return nil
 }
