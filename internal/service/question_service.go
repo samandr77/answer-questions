@@ -1,4 +1,4 @@
-package service // nolint: unused
+package service
 
 import (
 	"context"

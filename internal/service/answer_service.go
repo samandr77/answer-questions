@@ -58,8 +58,11 @@ func (s *answerService) CreateAnswer(ctx context.Context, questionID int, userID
 }
 
 func (s *answerService) GetAnswer(ctx context.Context, id int) (*entity.Answer, error) {
-	// TODO: реализовать
-	return nil, nil
+	answer, err := s.answerRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, entity.ErrAnswerNotFound
+	}
+	return answer, nil
 }
 
 func (s *answerService) GetAnswersByQuestion(ctx context.Context, questionID int) ([]entity.Answer, error) {
@@ -71,6 +74,11 @@ func (s *answerService) GetAnswersByQuestion(ctx context.Context, questionID int
 }
 
 func (s *answerService) DeleteAnswer(ctx context.Context, id int) error {
-	// TODO: реализовать
+	if err := s.answerRepo.Delete(ctx, id); err != nil {
+		if err == entity.ErrAnswerNotFound {
+			return entity.ErrAnswerNotFound
+		}
+		return entity.ErrDatabaseQuery
+	}
 	return nil
 }

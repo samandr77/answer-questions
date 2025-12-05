@@ -1,4 +1,4 @@
-package repository // nolint: unused
+package repository
 
 import (
 	"context"
