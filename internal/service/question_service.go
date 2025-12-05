@@ -36,8 +36,14 @@ func (s *questionService) GetQuestion(ctx context.Context, id int) (*entity.Ques
 }
 
 func (s *questionService) GetAllQuestions(ctx context.Context) ([]entity.Question, error) {
-	// TODO: реализовать
-	return nil, nil
+	questions, err := s.repo.GetAll(ctx)
+	if err != nil {
+		return nil, entity.ErrDatabaseQuery
+	}
+	if questions == nil {
+		return []entity.Question{}, nil
+	}
+	return questions, nil
 }
 
 func (s *questionService) DeleteQuestion(ctx context.Context, id int) error {
