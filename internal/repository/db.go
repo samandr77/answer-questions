@@ -13,11 +13,13 @@ type QuestionRepository interface {
 
 	GetAll(ctx context.Context) ([]entity.Question, error)
 
+	GetByText(ctx context.Context, text string) (*entity.Question, error)
+
 	Delete(ctx context.Context, id int) error
 }
 
 type AnswerRepository interface {
-	Create(ctx context.Context, answer *entity.Answer) error
+	Create(ctx context.Context, answer *entity.Answer) (*entity.Answer, error)
 
 	GetByID(ctx context.Context, id int) (*entity.Answer, error)
 

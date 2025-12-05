@@ -1,9 +1,15 @@
 package service
 
-import "github.com/andrey-samosuk/answer-questions/internal/entity"
+import (
+	"strings"
+
+	"github.com/andrey-samosuk/answer-questions/internal/entity"
+)
 
 func ValidateQuestion(text string) error {
-	// TODO: реализовать валидацию (пустота, длина)
+	if strings.TrimSpace(text) == "" {
+		return entity.ErrInvalidQuestionText
+	}
 	return nil
 }
 

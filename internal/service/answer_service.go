@@ -30,8 +30,31 @@ func NewAnswerService(answerRepo repository.AnswerRepository, questionRepo repos
 }
 
 func (s *answerService) CreateAnswer(ctx context.Context, questionID int, userID, text string) (*entity.Answer, error) {
-	// TODO: реализовать проверку вопроса и валидацию
-	return nil, nil
+	if userID == "" {
+		return nil, entity.ErrInvalidUserID
+	}
+
+	if text == "" {
+		return nil, entity.ErrInvalidAnswerText
+	}
+
+	_, err := s.questionRepo.GetByID(ctx, questionID)
+	if err != nil {
+		return nil, entity.ErrQuestionNotFound
+	}
+
+	answer := &entity.Answer{
+		QuestionID: questionID,
+		UserID:     userID,
+		Text:       text,
+	}
+
+	createdAnswer, err := s.answerRepo.Create(ctx, answer)
+	if err != nil {
+		return nil, entity.ErrDatabaseQuery
+	}
+
+	return createdAnswer, nil
 }
 
 func (s *answerService) GetAnswer(ctx context.Context, id int) (*entity.Answer, error) {
@@ -40,8 +63,11 @@ func (s *answerService) GetAnswer(ctx context.Context, id int) (*entity.Answer, 
 }
 
 func (s *answerService) GetAnswersByQuestion(ctx context.Context, questionID int) ([]entity.Answer, error) {
-	// TODO: реализовать
-	return nil, nil
+	answers, err := s.answerRepo.GetByQuestionID(ctx, questionID)
+	if err != nil {
+		return nil, entity.ErrDatabaseQuery
+	}
+	return answers, nil
 }
 
 func (s *answerService) DeleteAnswer(ctx context.Context, id int) error {

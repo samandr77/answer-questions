@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"log"
 	"net/http"
 	"os"
@@ -11,7 +10,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/pressly/goose/v3"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
@@ -33,9 +31,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Ошибка получения SQL DB: %v", err)
 	}
-	if err := runMigrations(sqlDB); err != nil {
-		log.Fatalf("Ошибка при применении миграций: %v", err)
-	}
+	defer func() {
+		if err := sqlDB.Close(); err != nil {
+			log.Printf("Ошибка при закрытии БД: %v", err)
+		}
+	}()
 
 	questionRepo := repository.NewQuestionRepository(db)
 	answerRepo := repository.NewAnswerRepository(db)
@@ -80,24 +80,6 @@ func main() {
 		log.Printf("Ошибка при остановке сервера: %v", err)
 	}
 
-	if err := sqlDB.Close(); err != nil {
-		log.Printf("Ошибка при закрытии БД: %v", err)
-	}
-
 	wg.Wait()
 	log.Println("Приложение остановлено")
-}
-
-func runMigrations(db *sql.DB) error {
-	goose.SetBaseFS(nil)
-	if err := goose.SetDialect("postgres"); err != nil {
-		return err
-	}
-
-	migrationsDir := "migrations"
-	if err := goose.Up(db, migrationsDir); err != nil {
-		return err
-	}
-
-	return nil
 }
