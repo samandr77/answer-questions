@@ -4,14 +4,16 @@ import (
 	"context"
 
 	"github.com/andrey-samosuk/answer-questions/internal/entity"
+
+	"gorm.io/gorm"
 )
 
 type answerRepository struct {
-	// db *gorm.DB - добавится позже
+	db *gorm.DB
 }
 
-func NewAnswerRepository() AnswerRepository {
-	return &answerRepository{}
+func NewAnswerRepository(db *gorm.DB) AnswerRepository {
+	return &answerRepository{db: db}
 }
 
 func (r *answerRepository) Create(ctx context.Context, answer *entity.Answer) error {

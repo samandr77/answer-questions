@@ -18,6 +18,15 @@ type QuestionsListResponse struct {
 	Total     int                `json:"total"`
 }
 
+type QuestionMinimalResponse struct {
+	ID   int    `json:"id"`
+	Text string `json:"text"`
+}
+
+type QuestionsMinimalListResponse struct {
+	Questions []QuestionMinimalResponse `json:"questions"`
+}
+
 type CreateAnswerRequest struct {
 	UserID string `json:"user_id"`
 	Text   string `json:"text"`
